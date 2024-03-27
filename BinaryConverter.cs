@@ -10,32 +10,31 @@ namespace IEEE754
 {
     public static class BinaryConverter
     {
-        public const int MAX_SIZE = 32;
-        public static bool[] WholePartToBinary(this int numeral)
+        public static bool[] ToBinary(this float value)
         {
-            if (numeral == 0) return [false];
-            bool[] bits = new bool[(int)Math.Log2(numeral) + 1];
-            int i = 0;
-            foreach (char a in Convert.ToString(numeral, 2))
-            {
-                bits[i] = a == '1';
-                i++;
-            }
-            return bits;
-        }
-        public static bool[] FractionPartToBinary(this double numeral)
-        {
-            if (numeral == 0) return [false];
-            List<bool> bits = [];
+            int bitCount = sizeof(float) * 8;
+            bool[] result = new bool[bitCount]; 
 
-            while (bits.Count != MAX_SIZE)
+            int intValue = BitConverter.ToInt32(BitConverter.GetBytes(value), 0);
+
+            //if (value < 0) result[bitCount - 1] = true;
+            for (int bit = 0; bit < bitCount ; ++bit)
             {
-                numeral *= 2;
-                bits.Add(numeral >= 1);
-                if (numeral == 1) break;
-                numeral -= Math.Floor(numeral);          
+                int maskedValue = intValue & (1 << bit);
+                result[bit] = maskedValue != 0; 
             }
-            return [.. bits];
+
+            return result;
+        }
+        public static bool[] ToBinary(this int value) {
+            List<bool> bools = [];
+            value = Math.Abs(value);
+            while (value > 0)
+            {
+                bools.Add(value % 2 == 1);
+                value /= 2;
+            }
+            return [.. bools];
         }
 
         public static int ToNumeral(this BitArray binary)
