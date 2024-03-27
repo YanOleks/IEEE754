@@ -12,21 +12,14 @@ namespace IEEE754
     {
         public static bool[] ToBinary(this float value)
         {
-            int bitCount = sizeof(float) * 8;
-            bool[] result = new bool[bitCount]; 
+            if (value == 0) return [false];
+            List<bool> bools = [];
 
-            int intValue = BitConverter.ToInt32(BitConverter.GetBytes(value), 0);
 
-            //if (value < 0) result[bitCount - 1] = true;
-            for (int bit = 0; bit < bitCount ; ++bit)
-            {
-                int maskedValue = intValue & (1 << bit);
-                result[bit] = maskedValue != 0; 
-            }
-
-            return result;
+            return [..bools];
         }
         public static bool[] ToBinary(this int value) {
+            if (value == 0) return [false];
             List<bool> bools = [];
             value = Math.Abs(value);
             while (value > 0)

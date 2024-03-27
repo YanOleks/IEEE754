@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace IEEE754
 {
@@ -12,6 +13,7 @@ namespace IEEE754
         bool[] _array = new bool[size];
         decimal _decimal;
         bool _implicitBit = true;
+        int _bias = 0;
 
 
         public const int EXPONENT_SIZE = 8;
@@ -83,71 +85,21 @@ namespace IEEE754
             }
         }
 
-        public IEEE754(float value)
+        private int exp
         {
-            ImplicitBit = true;
-            if (value == 0)
-            {
-                Clear();
-                return;
-            }
-            bool[] binary = BinaryConverter.ToBinary(value);
-            Sign = binary[0];            
-            int bias = GetBias(binary);           
-            bool[] mantissa = binary[0..23];//(23 - MANTISSA_SIZE - 1)
-            if (mantissa[0] == true)
-            {
-                int i;
-                for (i = 1;i < mantissa.Length;i++)
-                {
-                    if (!mantissa[i])
-                    {
-                        mantissa[i] = true;
-                        break;
-
-                    }
-                    mantissa[i] = false;
-                }
-                if (i == mantissa.Length)
-                {
-                    bias++;
-                }
-            }
-            if (IsInf(bias))
-            {
-                int i;
-                for (i = 1; i <= EXPONENT_SIZE; i++)
-                {
-                    _array[i] = true;
-                }
-                for (; i < size; i++)
-                {
-                    _array[i] = false;
-                }
-                return;
-            }
-            int exponent = bias + (int)Math.Pow(2, EXPONENT_SIZE - 1) - 1;
-            bool[] binaryExponent = BinaryConverter.ToBinary(exponent);
-            Array.Reverse(binaryExponent);
-            Exponent = binaryExponent;
-            Array.Reverse(mantissa);
-            Mantissa = mantissa[0..MANTISSA_SIZE];
+            get => _bias + (int)Math.Pow(2, EXPONENT_SIZE - 1) - 1;
         }
 
-        private int GetBias(bool[] bools)
+        public IEEE754(double value)
         {
-            BitArray expBinary = new(bools[23..31]);
-            if (expBinary.Count != 8)
-            {
-                throw new ArgumentException("bits");
-            }
-            byte[] bytes = new byte[1];
-            expBinary.CopyTo(bytes, 0);
-            return bytes[0] - 127;
+            Sign = value < 0;
+            Mantissa = ToBinary(value);
+            Exponent = ToBinary(exp);
         }
-        private bool IsInf(int bias) 
+        private bool IsInf() 
         {
-            return bias >= Math.Pow(2, EXPONENT_SIZE - 1) ;
+            //throw new NotImplementedException();
+            return _bias > Math.Pow(2, EXPONENT_SIZE - 1) - 2;
         }
         private void Clear()
         {
@@ -155,6 +107,103 @@ namespace IEEE754
             {
                 _array[i] = false;
             }
+        }
+
+        private bool[] ToBinary(double value)
+        {
+            if (value == 0) return [false];
+            value = Math.Abs(value);
+
+            List<bool> wholePart = WholeToBinary(value);
+            List<bool> fractionPart = FractionToBinary(value, MANTISSA_SIZE - wholePart.Count + 2);
+            List<bool> binary = new(wholePart.Concat(fractionPart));
+
+            if (wholePart.Count > 0)
+            {
+                _bias = wholePart.Count - 1;
+                binary = new(binary[1..]);
+            } 
+            else{
+                int firstOne = fractionPart.IndexOf(true);
+                _bias = -(firstOne + 1);
+                binary = new(binary[(firstOne + 1)..]);
+            }
+            if (IsInf()) return [..Enumerable.Repeat(false, MANTISSA_SIZE)];
+
+
+            if (binary.Count > MANTISSA_SIZE)
+            {
+                if (binary[MANTISSA_SIZE] == true)
+                {
+                    int i;
+                    for (i = MANTISSA_SIZE - 1; i >= 0; i--)
+                    {
+                        if (binary[i])
+                        {
+                            binary[i] = false;
+                            continue;
+                        }
+                        binary[i] = true;
+                        break;
+                    }
+                    if (i == -1)
+                    {
+                        _bias++;
+                    }
+                }
+                binary.RemoveRange(MANTISSA_SIZE, binary.Count - MANTISSA_SIZE);
+            } 
+            else{
+                binary.AddRange(Enumerable.Repeat(false, MANTISSA_SIZE - binary.Count));
+            }
+
+            return [.. binary];
+
+        }
+        private List<bool> WholeToBinary(double value)
+        {
+            double wholePart = Math.Truncate(value);
+            if (wholePart == 0) return [];
+            List<bool> result = [];
+            while (wholePart > 0)
+            {
+                result.Add(wholePart % 2 == 1);
+                wholePart = Math.Truncate(wholePart / 2);
+            }
+            result.Reverse();
+            return result;
+        }
+        private List<bool> FractionToBinary(double value, int limit)
+        {
+            double fraction = value - Math.Truncate(value);
+            if (fraction == 0) return [];
+            List<bool> result = [];
+            while (fraction != 1.0 && result.Count < limit)
+            {
+                fraction *= 2;
+                if (fraction >= 1)
+                {
+                    fraction -= Math.Truncate(fraction);
+                    result.Add(true);
+                    continue;
+                }
+                result.Add(false);
+            }
+            return result;
+        }
+
+        private bool[] ToBinary(int value)
+        {
+            if (value == 0) return [..Enumerable.Repeat(false, EXPONENT_SIZE)];
+            if (IsInf()) return [.. Enumerable.Repeat(true, EXPONENT_SIZE)];
+            List<bool> bools = [];
+            value = Math.Abs(value);
+            while (value > 0)
+            {
+                bools.Add(value % 2 == 1);
+                value /= 2;
+            }
+            return [.. bools];
         }
 
         public string GetString()
@@ -181,5 +230,7 @@ namespace IEEE754
                 Console.Write(i ? "1" : "0");
             }
         }
+
+
     }
 }

@@ -6,12 +6,8 @@ namespace IEEE754
     {
         static void Main(string[] args)
         {
-            IEEE754 test = new(0.14329485249857f);
+            IEEE754 test = new(-2444444444444444444444444443324895720485702570293485720984570444.0);
             test.Print();
-            //foreach (var a in BinaryConverter.ToBinary(-325.34f))
-            //{
-            //    Console.Write(a ? "1" : "0");
-            //}
         }
     }
 }
