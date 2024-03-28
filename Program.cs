@@ -6,7 +6,7 @@ namespace IEEE754
     {
         static void Main(string[] args)
         {
-            IEEE754 test = new(-2444444444444444444444444443324895720485702570293485720984570444.0);
+            IEEE754 test = new(double.NaN);
             test.Print();
         }
     }

@@ -43,7 +43,7 @@ namespace IEEE754
         }
         public bool[] Exponent
         {
-            get => _array[1..EXPONENT_SIZE];
+            get => _array[1..(EXPONENT_SIZE + 1)];
             private set
             {
                 if (value.Length > EXPONENT_SIZE)
@@ -92,7 +92,25 @@ namespace IEEE754
 
         public IEEE754(double value)
         {
-            Sign = value < 0;
+            Sign = double.IsNegative(value);
+            if (value == 0)
+            {
+                Exponent = [.. Enumerable.Repeat(false, EXPONENT_SIZE)];
+                Mantissa = [.. Enumerable.Repeat(false, MANTISSA_SIZE)];
+                return;
+            }
+            if (double.IsInfinity(value))
+            {
+                _implicitBit = false;
+                Exponent = [.. Enumerable.Repeat(true, EXPONENT_SIZE)];
+                return;
+            }
+            if (double.IsNaN(value))
+            {
+                Exponent = [.. Enumerable.Repeat(true, EXPONENT_SIZE)];
+                Mantissa = [true];
+                return;
+            }
             Mantissa = ToBinary(value);
             Exponent = ToBinary(exp);
         }
@@ -111,7 +129,7 @@ namespace IEEE754
 
         private bool[] ToBinary(double value)
         {
-            if (value == 0) return [false];
+            if (value == 0) return [.. Enumerable.Repeat(false, MANTISSA_SIZE)];
             value = Math.Abs(value);
 
             List<bool> wholePart = WholeToBinary(value);
@@ -203,6 +221,7 @@ namespace IEEE754
                 bools.Add(value % 2 == 1);
                 value /= 2;
             }
+            bools.Reverse();
             return [.. bools];
         }
 
@@ -225,12 +244,18 @@ namespace IEEE754
                 Console.Write(i ? "1" : "0");
             }
             Console.Write(" ");
+            Console.Write(_implicitBit ? "1 " : "0 ");
+            int j = 0;
             foreach (var i in Mantissa)
             {
+                j++;
                 Console.Write(i ? "1" : "0");
+                if (j % 4 == 0)
+                {
+                    j = 0;
+                    Console.Write(" ");
+                }
             }
         }
-
-
     }
 }
