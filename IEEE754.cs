@@ -10,6 +10,7 @@ namespace IEEE754
 {
     internal class IEEE754
     {
+        #region Fields
         bool[] _array = new bool[size];
         decimal _decimal;
         bool _implicitBit = true;
@@ -21,7 +22,9 @@ namespace IEEE754
         public const int MANTISSA_SIZE = 11;
 
         public const int size = EXPONENT_SIZE + MANTISSA_SIZE + 1;
+        #endregion
 
+        #region Properties
         public decimal Decimal
         {
             get => _decimal;
@@ -29,10 +32,10 @@ namespace IEEE754
             {
                 _decimal = value;
                 Sign = Math.Sign(value) == -1;
-                throw new NotImplementedException("Needs converting");               
+                throw new NotImplementedException("Needs converting");
             }
         }
-        public bool Sign 
+        public bool Sign
         {
             get => _array[0];
             private set => _array[0] = value;
@@ -64,7 +67,7 @@ namespace IEEE754
                     return;
                 }
                 int j = 1;
-                foreach(var a in value)
+                foreach (var a in value)
                 {
                     _array[j] = a;
                     j++;
@@ -94,6 +97,7 @@ namespace IEEE754
         {
             get => (int)Math.Pow(2, EXPONENT_SIZE - 1) - 2;
         }
+        #endregion
 
         public IEEE754(double value)
         {
@@ -119,10 +123,12 @@ namespace IEEE754
             Mantissa = ToBinary(value);
             Exponent = ToBinary(exp);
         }
-        private bool IsInf() 
+
+        #region Private Functions
+        private bool IsInf()
         {
             //throw new NotImplementedException();
-            return _bias > maxBias;
+            return _bias > maxBias + 1;
         }
         private bool IsNonNormal()
         {
@@ -139,11 +145,11 @@ namespace IEEE754
 
         private bool[] ToBinary(double value)
         {
-            if (value == 0) return [.. Enumerable.Repeat(false, MANTISSA_SIZE)];            
+            if (value == 0) return [.. Enumerable.Repeat(false, MANTISSA_SIZE)];
             value = Math.Abs(value);
 
             List<bool> wholePart = WholeToBinary(value);
-            int limit = wholePart.Count > 0? MANTISSA_SIZE - wholePart.Count + 2: -1;
+            int limit = wholePart.Count > 0 ? MANTISSA_SIZE - wholePart.Count + 2 : -1;
             List<bool> fractionPart = FractionToBinary(value, limit);
             List<bool> binary = new(wholePart.Concat(fractionPart));
 
@@ -151,8 +157,9 @@ namespace IEEE754
             {
                 _bias = wholePart.Count - 1;
                 binary = new(binary[1..]);
-            } 
-            else{
+            }
+            else
+            {
                 int firstOne = fractionPart.IndexOf(true);
                 _bias = -(firstOne + 1);
                 if (IsNonNormal())
@@ -180,7 +187,7 @@ namespace IEEE754
                 }
                 binary = new(binary[(firstOne + 1)..]);
             }
-            if (IsInf()) return [..Enumerable.Repeat(false, MANTISSA_SIZE)];           
+            if (IsInf()) return [.. Enumerable.Repeat(false, MANTISSA_SIZE)];
 
             if (binary.Count > MANTISSA_SIZE)
             {
@@ -203,8 +210,9 @@ namespace IEEE754
                     }
                 }
                 binary.RemoveRange(MANTISSA_SIZE, binary.Count - MANTISSA_SIZE);
-            } 
-            else{
+            }
+            else
+            {
                 binary.AddRange(Enumerable.Repeat(false, MANTISSA_SIZE - binary.Count));
             }
 
@@ -249,7 +257,7 @@ namespace IEEE754
 
         private bool[] ToBinary(int value)
         {
-            if (value == 0 || !_isNormal) return [..Enumerable.Repeat(false, EXPONENT_SIZE)];
+            if (value == 0 || !_isNormal) return [.. Enumerable.Repeat(false, EXPONENT_SIZE)];
             if (IsInf()) return [.. Enumerable.Repeat(true, EXPONENT_SIZE)];
             List<bool> bools = [];
             value = Math.Abs(value);
@@ -261,15 +269,29 @@ namespace IEEE754
             bools.Reverse();
             return [.. bools];
         }
+        #endregion
 
-        public string GetString()
+        public override string ToString()
         {
-            char[] chars = new char[size];
-            for ( int i = 0; i < size; i++ )
+            StringBuilder sb = new();
+            sb.Append(Sign ? "1 " : "0 ");
+            foreach (var i in Exponent)
             {
-                chars[i] = _array[i]?'1':'0';
+                sb.Append(i ? "1" : "0");
             }
-            return new string(chars);
+            sb.Append(_implicitBit ? " 1 " : " 0 ");
+            int j = 0;
+            foreach (var i in Mantissa)
+            {
+                j++;
+                sb.Append(i ? "1" : "0");
+                if (j % 4 == 0)
+                {
+                    j = 0;
+                    sb.Append(' ');
+                }
+            }
+            return sb.ToString();
         }
         public void Print()
         {
