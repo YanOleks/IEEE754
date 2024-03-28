@@ -15,9 +15,10 @@ namespace IEEE754
         bool _implicitBit = true;
         int _bias = 0;
 
+        bool _isNormal = true;
 
-        public const int EXPONENT_SIZE = 8;
-        public const int MANTISSA_SIZE = 23;
+        public const int EXPONENT_SIZE = 6;
+        public const int MANTISSA_SIZE = 11;
 
         public const int size = EXPONENT_SIZE + MANTISSA_SIZE + 1;
 
@@ -89,6 +90,10 @@ namespace IEEE754
         {
             get => _bias + (int)Math.Pow(2, EXPONENT_SIZE - 1) - 1;
         }
+        private int maxBias
+        {
+            get => (int)Math.Pow(2, EXPONENT_SIZE - 1) - 2;
+        }
 
         public IEEE754(double value)
         {
@@ -117,7 +122,12 @@ namespace IEEE754
         private bool IsInf() 
         {
             //throw new NotImplementedException();
-            return _bias > Math.Pow(2, EXPONENT_SIZE - 1) - 2;
+            return _bias > maxBias;
+        }
+        private bool IsNonNormal()
+        {
+            _isNormal = !(_bias < -(maxBias));
+            return !_isNormal;
         }
         private void Clear()
         {
@@ -129,11 +139,12 @@ namespace IEEE754
 
         private bool[] ToBinary(double value)
         {
-            if (value == 0) return [.. Enumerable.Repeat(false, MANTISSA_SIZE)];
+            if (value == 0) return [.. Enumerable.Repeat(false, MANTISSA_SIZE)];            
             value = Math.Abs(value);
 
             List<bool> wholePart = WholeToBinary(value);
-            List<bool> fractionPart = FractionToBinary(value, MANTISSA_SIZE - wholePart.Count + 2);
+            int limit = wholePart.Count > 0? MANTISSA_SIZE - wholePart.Count + 2: -1;
+            List<bool> fractionPart = FractionToBinary(value, limit);
             List<bool> binary = new(wholePart.Concat(fractionPart));
 
             if (wholePart.Count > 0)
@@ -144,10 +155,32 @@ namespace IEEE754
             else{
                 int firstOne = fractionPart.IndexOf(true);
                 _bias = -(firstOne + 1);
+                if (IsNonNormal())
+                {
+                    ImplicitBit = false;
+                    if (binary[^1])
+                    {
+                        int i;
+                        for (i = binary.Count - 2; i >= 0; i--)
+                        {
+                            if (binary[i])
+                            {
+                                binary[i] = false;
+                                continue;
+                            }
+                            binary[i] = true;
+                            break;
+                        }
+                        if (i == -1)
+                        {
+                            _bias++;
+                        }
+                    }
+                    return [.. binary[maxBias..(maxBias + MANTISSA_SIZE)]];
+                }
                 binary = new(binary[(firstOne + 1)..]);
             }
-            if (IsInf()) return [..Enumerable.Repeat(false, MANTISSA_SIZE)];
-
+            if (IsInf()) return [..Enumerable.Repeat(false, MANTISSA_SIZE)];           
 
             if (binary.Count > MANTISSA_SIZE)
             {
@@ -196,11 +229,15 @@ namespace IEEE754
             double fraction = value - Math.Truncate(value);
             if (fraction == 0) return [];
             List<bool> result = [];
-            while (fraction != 1.0 && result.Count < limit)
+            while (fraction != 1.0 && (result.Count < limit || limit == -1))
             {
                 fraction *= 2;
                 if (fraction >= 1)
                 {
+                    if (limit == -1)
+                    {
+                        limit = MANTISSA_SIZE + maxBias + 1;
+                    }
                     fraction -= Math.Truncate(fraction);
                     result.Add(true);
                     continue;
@@ -212,7 +249,7 @@ namespace IEEE754
 
         private bool[] ToBinary(int value)
         {
-            if (value == 0) return [..Enumerable.Repeat(false, EXPONENT_SIZE)];
+            if (value == 0 || !_isNormal) return [..Enumerable.Repeat(false, EXPONENT_SIZE)];
             if (IsInf()) return [.. Enumerable.Repeat(true, EXPONENT_SIZE)];
             List<bool> bools = [];
             value = Math.Abs(value);
