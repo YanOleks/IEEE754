@@ -16,6 +16,8 @@ namespace IEEE754
             double nonNormal = 0.00000000000022737368;
             double nan = double.NaN;
 
+            //double pastMax = 42939187210.0;
+
             PrintNumber(minAbs);
             PrintNumber(max);
             PrintNumber(min);
@@ -24,21 +26,21 @@ namespace IEEE754
             PrintNumber(inf2);
             PrintNumber(nonNormal);
             PrintNumber(nan);
+            //PrintNumber(pastMax);
 
             Calculator();
         }
 
         static void PrintNumber(double number )
         {
-            Console.WriteLine($"{new IEEE754(number)}: {number}");
+            Console.WriteLine($"{new IEEE754(number)}: {(number).ToString("E5")}");
         }
         static void Calculator()
         {
             Console.WriteLine();
-            double number;
             Console.Write("Enter value: ");
             string? value = Console.ReadLine();
-            if (Double.TryParse(value, out number))            
+            if (Double.TryParse(value, out double number))            
                 PrintNumber(number);
             else
                 Console.WriteLine("Unable to parse '{0}'.", value);
