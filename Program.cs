@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace IEEE754
@@ -7,6 +8,7 @@ namespace IEEE754
     {
         static void Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.UTF8;
             double minAbs = 0.00000000093132257462;
             double max = 4293918720.0;
             double min = -4293918720.0;
@@ -18,22 +20,22 @@ namespace IEEE754
 
             //double pastMax = 42939187210.0;
 
-            PrintNumber(minAbs);
-            PrintNumber(max);
-            PrintNumber(min);
-            PrintNumber(one);
-            PrintNumber(inf);
-            PrintNumber(inf2);
-            PrintNumber(nonNormal);
-            PrintNumber(nan);
+            PrintNumber(minAbs, "\t- мінімальне за абсолютною величиною ненульове представлення");
+            PrintNumber(max, "\t- максимальне додатнє представлення");
+            PrintNumber(min, "- мінімальне від’ємне преставлення");
+            PrintNumber(one, "\t- число +1,0Е0");
+            PrintNumber(inf, "\t\t- значення +∞");
+            PrintNumber(inf2, "\t\t- значення -∞;");
+            PrintNumber(nonNormal, "\t- будь-який варіант для ненормалізованого ЧПТ");
+            PrintNumber(nan, "\t\t- будь-який варіант для NaN-значення");
             //PrintNumber(pastMax);
 
             Calculator();
         }
 
-        static void PrintNumber(double number )
+        static void PrintNumber(double number, string str  = "")
         {
-            Console.WriteLine($"{new IEEE754(number)}: {(number).ToString("E5")}");
+            Console.WriteLine($"{new IEEE754(number)}: {(number).ToString("E5")} {str}");
         }
         static void Calculator()
         {
